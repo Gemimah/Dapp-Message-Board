@@ -1,0 +1,101 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Block Message Board</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script src="https://cdn.jsdelivr.net/npm/web3@1.7.0/dist/web3.min.js"></script>
+  </head>
+  <body class="bg-gray-100 flex items-center justify-center h-screen">
+    <div class="bg-white p-8 rounded-lg shadow-lg w-full max-w-md">
+      <h1 class="text-2xl font-bold text-center mb-2">Block Message Board</h1>
+      <h2 class="text-lg font-semibold text-center mb-6">
+        Current Message:
+        <span id="currentMessage" class="text-gray-500">Loading...</span>
+      </h2>
+      <div class="flex justify-center mb-4">
+        <input
+          type="text"
+          id="messageInput"
+          placeholder="Enter new message"
+          class="border border-gray-300 rounded-l-md p-2 w-2/3 focus:outline-none focus:ring-2 focus:ring-blue-500"
+        />
+        <button
+          onclick="updateMessage()"
+          class="bg-blue-500 text-white p-2 rounded-r-md hover:bg-blue-600 transition"
+        >
+          Update Message
+        </button>
+      </div>
+      <div class="flex justify-center">
+        <button
+          onclick="refreshMessage()"
+          class="bg-gray-300 text-gray-800 p-2 rounded-md hover:bg-gray-400 transition w-full"
+        >
+          Refresh Message
+        </button>
+      </div>
+    </div>
+
+    <script>
+      let web3;
+      let contract;
+
+      async function init() {
+        if (window.ethereum) {
+          web3 = new Web3(window.ethereum);
+          try {
+            await window.ethereum.request({ method: "eth_requestAccounts" });
+            const contractAddress = "0xC2732a73a3325C8fbB816FeeE9d73fd04E3a09d5"; // Your deployed contract address
+            const response = await fetch('abi.json');
+            const abi = await response.json();
+            contract = new web3.eth.Contract(abi.abi, contractAddress); // Use abi.abi from the JSON
+            refreshMessage();
+          } catch (error) {
+            console.error("User denied account access or error:", error);
+            alert("Please connect MetaMask.");
+          }
+        } else {
+          alert(
+            "MetaMask not detected. Please ensure it is installed and active."
+          );
+        }
+      }
+
+      async function updateMessage() {
+        const messageInput = document.getElementById("messageInput").value;
+        if (messageInput && contract) {
+          try {
+            await contract.methods
+              .updateMessage(messageInput)
+              .send({ from: (await web3.eth.getAccounts())[0] });
+            document.getElementById("messageInput").value = "";
+            refreshMessage();
+          } catch (error) {
+            console.error("Transaction failed:", error);
+            alert("Transaction failed. Check console for details.");
+          }
+        } else {
+          alert("Please enter a message and connect MetaMask!");
+        }
+      }
+
+      async function refreshMessage() {
+        if (contract) {
+          try {
+            const message = await contract.methods.getMessage().call();
+            document.getElementById("currentMessage").textContent =
+              message || "Loading...";
+          } catch (error) {
+            console.error("Failed to fetch message:", error);
+            document.getElementById("currentMessage").textContent =
+              "Loading...";
+          }
+        }
+      }
+
+      window.addEventListener("load", init);
+    </script>
+  </body>
+</html>
